@@ -15,8 +15,12 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return a message including "Welcome to the Parts-of-Speech Tagger Service"', () => {
+      expect(appController.getHello()).toMatch('Welcome to the Part-of-Speech Tagger Service');
+    });
+
+    it('should return a message including a link to the swagger API documentation', () => {
+      expect(appController.getHello()).toMatch('<a href="/docs">');
     });
   });
 });

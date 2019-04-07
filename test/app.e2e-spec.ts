@@ -18,6 +18,9 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .then(response => {
+        expect(response.text).toMatch('Welcome to the Part-of-Speech Tagger Service');
+        expect(response.text).toMatch('<a href="/docs">');
+      });
   });
 });
