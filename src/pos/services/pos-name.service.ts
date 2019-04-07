@@ -65,7 +65,7 @@ export class PosNameService {
         { token: ':', description: 'Punctuation' },
     ].map(obj => plainToClass(PosName, obj));
 
-    public getPosNames(): PosName[] {
+    public async getPosNames(): Promise<PosName[]> {
         return this.posNames;
     }
 }

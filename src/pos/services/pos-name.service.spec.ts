@@ -21,14 +21,14 @@ describe('PosNameService', () => {
         expect(service.getPosNames).toBeDefined();
     });
 
-    it('should get a list of part-of-speech names from "getPosNames"', () => {
-        const result = service.getPosNames();
+    it('should get a list of part-of-speech names from "getPosNames"', async () => {
+        const result = await service.getPosNames();
         expect(result).toBeInstanceOf(Array);
         result.forEach(r => expect(r).toBeInstanceOf(PosName));
     });
 
-    it('should return a part-of-speech for known tokens', () => {
-        const result = service.getPosNames();
+    it('should return a part-of-speech for known tokens', async () => {
+        const result = await service.getPosNames();
         const knownTokens = ['CC', 'CD', 'DT', 'EX', 'FW', 'IN', 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NN', 'NNS', 'NP', 'NPS', 'PDT', 'POS', 'PP', 'PP',
         'RB', 'RBR', 'RBS', 'RP', 'SENT', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'VH', 'VHD', 'VHG', 'VHN', 'VHP', 'VHZ', 'VV',
         'VVD', 'VVG', 'VVN', 'VVP', 'VVZ', 'WDT', 'WP'];

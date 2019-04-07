@@ -20,8 +20,18 @@ describe('PosTaggerService', () => {
         expect(service.tagTextWithPos).toBeDefined();
     });
 
-    it('should define a method called "tagTextWithPosInline"', () => {
-        expect(service.tagTextWithPosInline).toBeDefined();
+    describe('Inline string tagging', () => {
+        it('should define a method called "tagTextWithPosInline"', () => {
+            expect(service.tagTextWithPosInline).toBeDefined();
+        });
+
+        it('should accept and return a string value', async () => {
+            expect(typeof await service.tagTextWithPosInline('Hello')).toBe('string');
+        });
+
+        it('should correctly append the part-of-speech token', async () => {
+            expect(await service.tagTextWithPosInline('Hello')).toBe('Hello_UH');
+        });
     });
 
     it('should define a method called "tagTextWithPosAndLemmatize"', () => {
