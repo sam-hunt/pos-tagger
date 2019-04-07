@@ -3,24 +3,24 @@ import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 
 describe('AppController (e2e)', () => {
-  let app;
+    let app;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    beforeEach(async () => {
+        const moduleFixture: TestingModule = await Test.createTestingModule({
+            imports: [AppModule],
+        }).compile();
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
+        app = moduleFixture.createNestApplication();
+        await app.init();
+    });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .then(response => {
-        expect(response.text).toMatch('Welcome to the Part-of-Speech Tagger Service');
-        expect(response.text).toMatch('<a href="/docs">');
-      });
-  });
+    it('/ (GET)', () => {
+        return request(app.getHttpServer())
+        .get('/')
+        .expect(200)
+        .then(response => {
+            expect(response.text).toMatch('Welcome to the Part-of-Speech Tagger Service');
+            expect(response.text).toMatch('<a href="/docs">');
+        });
+    });
 });
