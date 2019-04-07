@@ -3,15 +3,15 @@ import { Injectable, NotImplementedException } from '@nestjs/common';
 @Injectable()
 export class PosTaggerService {
 
-    public tagTextWithPosInline(): string {
+    public tagTextWithPosInline(text: string): string {
         throw new NotImplementedException();
     }
 
-    public tagTextWithPos(): unknown {
+    public tagTextWithPos(text: string): unknown {
         throw new NotImplementedException();
     }
 
-    public tagTextWithPosAndLemmatize(): unknown {
+    public tagTextWithPosAndLemmatize(text: string): unknown {
         throw new NotImplementedException();
     }
 }

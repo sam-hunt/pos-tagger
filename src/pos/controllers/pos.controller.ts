@@ -1,7 +1,8 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { PosNameService } from '../services/pos-name.service';
 import { PosName } from '../classes/pos-name.class';
 import { PosTaggerService } from '../services/pos-tagger.service';
+import { ApiOkResponse, ApiInternalServerErrorResponse } from '@nestjs/swagger';
 
 @Controller('pos')
 export class PosController {
@@ -12,22 +13,29 @@ export class PosController {
     ) {}
 
     @Get('names')
+    @ApiOkResponse({ description: 'OK' })
     public getPosNames(): PosName[] {
         return this.posNameService.getPosNames();
     }
 
     @Post('tag')
-    public tagTextWithPos(): unknown {
-        return this.posTaggerService.tagTextWithPos();
+    @ApiOkResponse({ description: 'Successfully tagged text' })
+    @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
+    public tagTextWithPos(@Body() text: string): unknown {
+        return this.posTaggerService.tagTextWithPos(text);
     }
 
     @Post('tag-inline')
-    public tagTextWithPosInline(): string {
-        return this.posTaggerService.tagTextWithPosInline();
+    @ApiOkResponse({ description: 'Successfully tagged text' })
+    @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
+    public tagTextWithPosInline(@Body() text: string): string {
+        return this.posTaggerService.tagTextWithPosInline(text);
     }
 
     @Post('tag-with-stems')
-    public tagTextWithPosAndLemmatize(): unknown {
-        return this.posTaggerService.tagTextWithPosAndLemmatize();
+    @ApiOkResponse({ description: 'Successfully tagged text' })
+    @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
+    public tagTextWithPosAndLemmatize(@Body() text: string): unknown {
+        return this.posTaggerService.tagTextWithPosAndLemmatize(text);
     }
 }

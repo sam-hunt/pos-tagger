@@ -46,7 +46,7 @@ describe('PosController', () => {
             it('should call "tagTextWithPosInline" on the PosTaggerService', () => {
                 const result = 'Hello_UH';
                 jest.spyOn(taggerService, 'tagTextWithPosInline').mockImplementation(() => result);
-                expect(controller.tagTextWithPosInline()).toBe(result);
+                expect(controller.tagTextWithPosInline('Hello')).toBe(result);
                 expect(taggerService.tagTextWithPosInline).toHaveBeenCalled();
             });
         });
@@ -59,7 +59,7 @@ describe('PosController', () => {
             it('should call "tagTextWithPos" on the PosTaggerService', () => {
                 const result = {};
                 jest.spyOn(taggerService, 'tagTextWithPos').mockImplementation(() => result);
-                expect(controller.tagTextWithPos()).toBe(result);
+                expect(controller.tagTextWithPos('Hello')).toBe(result);
                 expect(taggerService.tagTextWithPos).toHaveBeenCalled();
             });
         });
@@ -72,7 +72,7 @@ describe('PosController', () => {
             it('should call "tagTextWithPosAndLemmatize" on the PosTaggerService', () => {
                 const result = {};
                 jest.spyOn(taggerService, 'tagTextWithPosAndLemmatize').mockImplementation(() => result);
-                expect(controller.tagTextWithPosAndLemmatize()).toBe(result);
+                expect(controller.tagTextWithPosAndLemmatize('Hello')).toBe(result);
                 expect(taggerService.tagTextWithPosAndLemmatize).toHaveBeenCalled();
             });
         });
