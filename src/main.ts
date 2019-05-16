@@ -10,7 +10,6 @@ async function bootstrap() {
         .setDescription(process.env.npm_package_description)
         .setVersion(process.env.npm_package_version)
         .addTag('app-info', 'Application Information')
-        .addTag('pos-names', 'Part-of-Speech Naming')
         .addTag('pos-tagging', 'Part-of-Speech Tagging')
         .build();
     const document = SwaggerModule.createDocument(app, options);

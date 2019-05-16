@@ -1,56 +1,39 @@
-import { Controller, Get, Post, Body, Header } from '@nestjs/common';
-import { PosNameService } from '../services/pos-name.service';
-import { PosName } from '../classes/pos-name.class';
-import { PosTaggerService } from '../services/pos-tagger.service';
-import { ApiOkResponse, ApiInternalServerErrorResponse, ApiOperation, ApiUseTags, ApiConsumes } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Header, Logger, HttpCode } from '@nestjs/common';
+import { ApiOkResponse, ApiInternalServerErrorResponse, ApiOperation, ApiUseTags, ApiConsumes, ApiImplicitBody } from '@nestjs/swagger';
 import { PlainBody } from '../decorators/plain-body.decorator';
+
+import { PosName } from '../models/pos-name.class';
+import { TaggedSentence } from '../models/tagged-sentence.class';
+import { PosTaggerService } from '../services/pos-tagger.service';
 
 @Controller('pos')
 export class PosController {
+    private readonly logger = new Logger(PosController.name);
+
     constructor(
-        private readonly posNameService: PosNameService,
         private readonly posTaggerService: PosTaggerService,
     ) {}
 
     @Get('names')
     @Header('Content-Type', 'application/json')
-    @ApiUseTags('pos-names')
+    @ApiUseTags('pos-tagging')
     @ApiOperation({ title: 'List part-of-speech token descriptions' })
     @ApiOkResponse({ description: 'OK' })
-    public async getPosNames(): Promise<PosName[]> {
-        return this.posNameService.getPosNames();
+    public async getPosDefs(): Promise<PosName[]> {
+        this.logger.log('Received request for part-of-speech descriptor array');
+        return await this.posTaggerService.getPosDefs();
     }
 
     @Post('tag')
-    @Header('Content-Type', 'application/json')
-    @ApiConsumes('text/plain')
-    @ApiUseTags('pos-tagging')
-    @ApiOperation({ title: 'Tag text with part-of-speech tokens via JSON response' })
-    @ApiOkResponse({ description: 'Successfully tagged text' })
-    @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
-    public async tagTextWithPos(@Body() text: string): Promise<unknown> {
-        return this.posTaggerService.tagTextWithPos(text);
-    }
-
-    @Post('tag-inline')
-    @Header('Content-Type', 'text/plain')
-    @ApiConsumes('text/plain')
-    @ApiUseTags('pos-tagging')
-    @ApiOperation({ title: 'Tag text with inlined part-of-speech tokens via string response' })
-    @ApiOkResponse({ description: 'Successfully tagged text' })
-    @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
-    public async tagTextWithPosInline(@PlainBody() text: string): Promise<string> {
-        return this.posTaggerService.tagTextWithPosInline(text);
-    }
-
-    @Post('tag-with-stems')
-    @Header('Content-Type', 'application/json')
+    @HttpCode(200)
     @ApiConsumes('text/plain')
     @ApiUseTags('pos-tagging')
     @ApiOperation({ title: 'Tag text with part-of-speech tokens and lemmatised word stems via JSON response' })
-    @ApiOkResponse({ description: 'Successfully tagged text' })
+    @ApiImplicitBody({ name: 'sentences', type: String })
+    @ApiOkResponse({ description: 'Successfully tagged text', type: TaggedSentence, isArray: true })
     @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
-    public async tagTextWithPosAndLemmatize(@Body() text: string): Promise<unknown> {
-        return this.posTaggerService.tagTextWithPosAndLemmatize(text);
+    public async tagSentences(@PlainBody() sentences: string): Promise<TaggedSentence[]> {
+        this.logger.log('Received request for part-of-speech tag with stems');
+        return await this.posTaggerService.tagSentences(sentences);
     }
 }
