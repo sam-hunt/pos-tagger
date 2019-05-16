@@ -66,7 +66,12 @@ export class StanfordPosTagger extends PosTagger {
         // TODO: Use regex matcher instead for clarity, passing xml tag stripping responsibility to child
         const sentenceXmlFragments = partialResponse
             .split('<sentence')
-            .map(fragment => fragment.substring(0, fragment.indexOf('</sentence>')).trim());
+            .map(fragment => fragment.replace('</sentence>', '').trim());
+        // If the fragment starts midsentence, append all tagged words to the last sentence
+        if (sentenceXmlFragments[0].indexOf('<word') >= 0) {
+            this.currentJob.resultBuffer[this.currentJob.resultBuffer.length - 1].words
+                .push(...this.parseSentenceFromXmlFragment(sentenceXmlFragments[0]).words);
+        }
         // Remove the leading non-sentence fragment
         sentenceXmlFragments.shift();
 
@@ -78,7 +83,7 @@ export class StanfordPosTagger extends PosTagger {
         // TODO: Use regex matcher instead for clarity, passing xml tag stripping responsibility to child
         const wordXmlFragments = sentenceXmlFragment
             .split('<word')
-            .map(fragment => fragment.substring(0, fragment.indexOf('</word>')).trim());
+            .map(fragment => fragment.replace('</word>', '').trim());
         // Remove the leading non-word fragment
         wordXmlFragments.shift();
 
@@ -87,12 +92,9 @@ export class StanfordPosTagger extends PosTagger {
     }
 
     private parseWordFromXmlFragment(wordXmlFragment: string): TaggedWord {
-        const posFrag = wordXmlFragment.split('pos="')[1];
-        const lemmaFrag = wordXmlFragment.split('lemma="')[1];
-
         const word = wordXmlFragment.substr(wordXmlFragment.indexOf('>') + 1);
-        const pos = posFrag.substring(0, posFrag.indexOf('"'));
-        const lemma = lemmaFrag.substring(0, lemmaFrag.indexOf('"'));
+        const pos = /(?:pos=")(.*)(?:)/.exec(wordXmlFragment)[1];
+        const lemma = /(?:lemma=")(.*)(?:)/.exec(wordXmlFragment)[1];
         return plainToClass(TaggedWord, { word, pos, lemma });
     }
 
