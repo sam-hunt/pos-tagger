@@ -6,7 +6,7 @@ import { PosName } from '../models/pos-name.class';
 import { TaggedSentence } from '../models/tagged-sentence.class';
 import { PosTaggerService } from '../services/pos-tagger.service';
 
-@Controller('pos')
+@Controller('v1/pos')
 export class PosController {
     private readonly logger = new Logger(PosController.name);
 
