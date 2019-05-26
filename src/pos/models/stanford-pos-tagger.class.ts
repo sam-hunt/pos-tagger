@@ -80,7 +80,7 @@ export class StanfordPosTagger extends PosTagger {
     }
 
     private parseSentenceFromXmlFragment(sentenceXmlFragment: string): TaggedSentence {
-        // TODO: Use regex matcher instead for clarity, passing xml tag stripping responsibility to child
+        // TODO: Support rare mid-word xml fragmentation cases.
         const wordXmlFragments = sentenceXmlFragment
             .split('<word')
             .map(fragment => fragment.replace('</word>', '').trim());
@@ -93,8 +93,8 @@ export class StanfordPosTagger extends PosTagger {
 
     private parseWordFromXmlFragment(wordXmlFragment: string): TaggedWord {
         const word = wordXmlFragment.substr(wordXmlFragment.indexOf('>') + 1);
-        const pos = /(?:pos=")(.*)(?:)/.exec(wordXmlFragment)[1];
-        const lemma = /(?:lemma=")(.*)(?:)/.exec(wordXmlFragment)[1];
+        const pos = /(?:pos=")([^"]*)(?:")/.exec(wordXmlFragment)[1];
+        const lemma = /(?:lemma=")([^"]*)(?:")/.exec(wordXmlFragment)[1];
         return plainToClass(TaggedWord, { word, pos, lemma });
     }
 
@@ -119,6 +119,9 @@ export class StanfordPosTagger extends PosTagger {
     }
 
     public async tag(sentences: string): Promise<TaggedSentence[]> {
+        if (!sentences.trim()) {
+            return [];
+        }
         sentences = sentences.replace(/\r?\n/g, ' ');
         let resolve: (s: TaggedSentence[]) => void;
         let reject: () => void;
