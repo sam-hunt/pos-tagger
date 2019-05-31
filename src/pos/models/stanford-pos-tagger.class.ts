@@ -37,6 +37,7 @@ export class StanfordPosTagger extends PosTagger {
                 return;
             }
             if (this.taggerIsBusy) {
+                // TODO: Only parse after all sentences have been received.
                 this.parseAndAppendPartialResponse(stdoutData);
                 if (this.isCurrentJobComplete) {
                     this.currentJob.resolve(this.currentJob.resultBuffer);
