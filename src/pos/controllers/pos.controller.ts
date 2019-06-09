@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Header, Logger, HttpCode } from '@nestjs/common';
 import { ApiOkResponse, ApiInternalServerErrorResponse, ApiOperation, ApiUseTags, ApiConsumes, ApiImplicitBody } from '@nestjs/swagger';
 import { PlainBody } from '../decorators/plain-body.decorator';
+import { performance } from 'perf_hooks';
 
 import { PosName } from '../models/pos-name.class';
 import { TaggedSentence } from '../models/tagged-sentence.class';
@@ -33,7 +34,10 @@ export class PosController {
     @ApiOkResponse({ description: 'Successfully tagged text', type: TaggedSentence, isArray: true })
     @ApiInternalServerErrorResponse({ description: 'Tagging process failure' })
     public async tagSentences(@PlainBody() sentences: string): Promise<TaggedSentence[]> {
+        const startTime = performance.now();
         this.logger.log('Received request for part-of-speech tag with stems');
-        return await this.posTaggerService.tagSentences(sentences);
+        const taggedSentences = await this.posTaggerService.tagSentences(sentences);
+        this.logger.log(`Tagged ${taggedSentences.length} sentences in ${Math.floor(performance.now() - startTime)}ms`);
+        return taggedSentences;
     }
 }

@@ -1,87 +1,60 @@
 import { Logger } from '@nestjs/common';
-import * as pty from 'node-pty';
+import { plainToClass } from 'class-transformer';
+import { Socket } from 'net';
+import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 
 import { PosTagger } from './pos-tagger.class';
 import { TaggedSentence } from './tagged-sentence.class';
 import { TaggerJob } from './tagger-job.interface';
 import { TaggedWord } from './tagged-word.class';
-import { plainToClass } from 'class-transformer';
 
 export class StanfordPosTagger extends PosTagger {
     private readonly logger = new Logger('StanfordPosTagger');
 
-    // TODO: Use node native streams instead of IPty
-    private childProcess: pty.IPty;
+    private childProcess: ChildProcess;
+    private socket: Socket;
+
     private currentJob: TaggerJob = null;
     private waitingJobs: TaggerJob[] = [];
-    private stdoutLinesReceived = 0;
 
-    // TODO: Refactor this back to a service, to utilise OnModuleInit and OnModuleDestroy
+    // TODO: Refactor this back to a service, to utilise OnModuleInit and OnModuleDestroy lifecycle hooks
     // TODO: handle OS signals with app.close() to gracefully shutdown modules
     constructor() {
         super();
         const command = `java`;
         const args: string[] = [
             `-mx300m`,
-            `-cp`, `stanford-postagger-2018-10-16/stanford-postagger.jar:`, `edu.stanford.nlp.tagger.maxent.MaxentTagger`,
+            `-cp`, `'stanford-postagger-2018-10-16/stanford-postagger.jar:'`, `edu.stanford.nlp.tagger.maxent.MaxentTaggerServer`,
             `-model`, `./stanford-postagger-2018-10-16/models/english-left3words-distsim.tagger`,
-            `-outputFormat`, `inlineXML`,
+            `-port`, `8889`,
+            `-outputFormat`, `xml`,
             `-outputFormatOptions`, `lemmatize`,
         ];
-        this.childProcess = pty.spawn(command, args, {});
+        this.logger.log(`Starting Child Process...`);
+        this.logger.verbose(`${command} ${args.join(' ')}`);
+        this.childProcess = spawn(command, args, { shell: true });
 
-        this.childProcess.on('data', (stdoutData: string) => {
-            stdoutData = stdoutData.replace(/\r\n/g, '\n');
-            this.logger.verbose(stdoutData.trim());
-            if (this.taggerIsStartingUp || !stdoutData || this.isEchoedStdinData(stdoutData)) {
-                return;
-            }
-            if (this.taggerIsBusy) {
-                // TODO: Only parse after all sentences have been received.
-                this.parseAndAppendPartialResponse(stdoutData);
-                if (this.isCurrentJobComplete) {
-                    this.currentJob.resolve(this.currentJob.resultBuffer);
-                    this.currentJob = null;
-                    this.startNextJobIfReady();
-                }
-            }
-        });
-
-        this.childProcess.on('exit', (err) => {
+        this.childProcess.on('error', err => this.logger.error(err));
+        this.childProcess.on('exit', err => {
             this.logger.error(err.toString().trim());
-            this.currentJob.reject();
-            this.waitingJobs.forEach(job => job.reject());
             this.logger.error('Child process shut down unexpectedly, unable to continue.');
+            if (this.currentJob) { this.currentJob.reject(); }
+            this.waitingJobs.forEach(job => job.reject());
             setImmediate(() => process.exit(0));
         });
-        setImmediate(() => this.logger.log('Loaded the Stanford Pos Tagger'));
     }
 
-    private isEchoedStdinData(data: string): boolean {
-        const result = this.currentJob && (this.currentJob.sentences === data.trim());
-        if (result) { this.logger.log(`Data received via stdout is echoed stdin input.`); }
-        return result;
-    }
-
-    private parseAndAppendPartialResponse(partialResponse: string) {
-        // TODO: Use regex matcher instead for clarity, passing xml tag stripping responsibility to child
-        const sentenceXmlFragments = partialResponse
+    private parseFullXmlResponse(response: string): TaggedSentence[] {
+        // TODO: Use an xml parser :P
+        const sentenceXmlFragments = response
             .split('<sentence')
             .map(fragment => fragment.replace('</sentence>', '').trim());
-        // If the fragment starts midsentence, append all tagged words to the last sentence
-        if (sentenceXmlFragments[0].indexOf('<word') >= 0) {
-            this.currentJob.resultBuffer[this.currentJob.resultBuffer.length - 1].words
-                .push(...this.parseSentenceFromXmlFragment(sentenceXmlFragments[0]).words);
-        }
         // Remove the leading non-sentence fragment
         sentenceXmlFragments.shift();
-
-        const sentences: TaggedSentence[] = sentenceXmlFragments.map(fragment => this.parseSentenceFromXmlFragment(fragment));
-        this.currentJob.resultBuffer.push(...sentences);
+        return sentenceXmlFragments.map(fragment => this.parseSentenceFromXmlFragment(fragment));
     }
 
     private parseSentenceFromXmlFragment(sentenceXmlFragment: string): TaggedSentence {
-        // TODO: Support rare mid-word xml fragmentation cases.
         const wordXmlFragments = sentenceXmlFragment
             .split('<word')
             .map(fragment => fragment.replace('</word>', '').trim());
@@ -99,26 +72,6 @@ export class StanfordPosTagger extends PosTagger {
         return plainToClass(TaggedWord, { word, pos, lemma });
     }
 
-    get isCurrentJobComplete(): boolean {
-        let remaining = this.currentJob.sentences;
-        for (const taggedSentence of this.currentJob.resultBuffer) {
-            for (const taggedWord of taggedSentence.words) {
-                remaining = remaining.substr(remaining.indexOf(taggedWord.word) + taggedWord.word.length);
-            }
-        }
-        const result = remaining.trim().length === 0;
-        this.logger.log(`Job ${result ? 'complete' : 'pending further output'}`);
-        return result;
-    }
-
-    get taggerIsStartingUp(): boolean {
-        return this.stdoutLinesReceived++ < 3;
-    }
-
-    get taggerIsBusy(): boolean {
-        return this.currentJob !== null;
-    }
-
     public async tag(sentences: string): Promise<TaggedSentence[]> {
         if (!sentences.trim()) {
             return [];
@@ -130,13 +83,14 @@ export class StanfordPosTagger extends PosTagger {
             resolve = promiseResolve;
             reject = promiseReject;
         });
-        this.waitingJobs.unshift({ sentences, promise, resultBuffer: [], resolve, reject });
+        const job: TaggerJob = { sentences, promise, xmlResponseBuffer: '', resolve, reject };
+        this.waitingJobs.unshift(job);
         this.startNextJobIfReady();
         return await promise;
     }
 
     private startNextJobIfReady(): Promise<void> {
-        if (this.taggerIsBusy) {
+        if (this.currentJob !== null) {
             this.logger.log('Tagger is busy, waiting for current job to complete');
             return;
         }
@@ -146,6 +100,23 @@ export class StanfordPosTagger extends PosTagger {
         }
         this.logger.log('Starting next job');
         this.currentJob = this.waitingJobs.pop();
-        this.childProcess.write(this.currentJob.sentences + '\n');
+        this.socket  = new Socket().connect(8889, '127.0.0.1');
+        this.socket.setEncoding('utf-8');
+        this.socket.write(this.currentJob.sentences + '\n');
+        this.socket.on('data', (data: string) => {
+            this.logger.verbose(data);
+            this.currentJob.xmlResponseBuffer += data.replace(/\r\n/g, '\n').trim();
+        });
+        this.socket.on('close', (hadError => {
+            if (!hadError) {
+                const taggedSentences = this.parseFullXmlResponse(this.currentJob.xmlResponseBuffer);
+                this.currentJob.resolve(taggedSentences);
+            } else {
+                this.logger.error('An unknown socket error has occured. Rejecting job and continuing.');
+                this.currentJob.reject();
+            }
+            this.currentJob = null;
+            this.startNextJobIfReady();
+        }));
     }
 }
