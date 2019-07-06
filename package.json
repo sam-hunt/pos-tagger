@@ -1,7 +1,7 @@
 {
   "name": "pos-tagger",
   "version": "1.0.0",
-  "description": "A microservice for tagging English text with part-of-speech tokens and lemmatisation.",
+  "description": "A support service for tagging English text with part-of-speech tokens and lemmatisation. Provides descriptors of tokens, and proxies requests through to an external Stanford Core NLP Server for annotation",
   "author": "Sam Hunt",
   "license": "MIT",
   "scripts": {
@@ -25,6 +25,7 @@
     "@nestjs/platform-express": "^6.3.1",
     "@nestjs/swagger": "^3.0.2",
     "class-transformer": "^0.2.0",
+    "compression": "^1.7.4",
     "reflect-metadata": "^0.1.12",
     "rimraf": "^2.6.2",
     "rxjs": "^6.3.3",
